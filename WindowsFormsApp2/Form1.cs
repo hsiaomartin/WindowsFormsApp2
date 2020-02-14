@@ -8,19 +8,22 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
+
 namespace WindowsFormsApp2
 {
     public partial class Form1 : Form
     {
         private Queue<double> dataQueue = new Queue<double>(100);
-
+        private bool serialPort_is_open = false;
         private int curValue = 0;
         private int label_counter = 0;
         private int num = 5;//每次刪除增加幾個點
+        private delegate void InvokeUpdateState(string state);
         public Form1()
         {
             InitializeComponent();
             InitChart();
+
         }
         private void myButtonClicked(object sender, EventArgs e)
         {
@@ -63,8 +66,8 @@ namespace WindowsFormsApp2
             this.chart1.Series.Add(series1);
             //設定圖表顯示樣式
             this.chart1.ChartAreas[0].AxisY.Minimum = 0;
-            this.chart1.ChartAreas[0].AxisY.Maximum = 100;
-            this.chart1.ChartAreas[0].AxisX.Interval = 2;
+            this.chart1.ChartAreas[0].AxisY.Maximum = 40;
+            this.chart1.ChartAreas[0].AxisX.Interval = 1;
             this.chart1.ChartAreas[0].AxisX.MajorGrid.LineColor = System.Drawing.Color.Silver;
             this.chart1.ChartAreas[0].AxisY.MajorGrid.LineColor = System.Drawing.Color.Silver;
             //設定標題
@@ -122,9 +125,84 @@ namespace WindowsFormsApp2
                     curValue = curValue + 10;
                 }
             }
+
+
+
+
+            if (temp_radioButton.Checked) {
+                this.chart1.Titles[0].Text = string.Format("{0}顯示","溫度");
+                string indata = mySerialPort.ReadLine();
+               // string RegularExpressions = "^(([0-9]+\\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\\.[0-9]+)|([0-9]*[1-9][0-9]*))$";
+
+
+                Invoke(new Action<string>(
+                    (s) =>
+                    {
+                       
+                     //   if (indata == RegularExpressions)
+                      //  {
+                            float indata_r = float.Parse(s);
+                            for (int i = 0; i < num; i++)
+                            {
+                                dataQueue.Enqueue(indata_r);
+                            }
+                      //  }
+                    }
+                    ), indata);
+                }
+            
+
         }
 
+            private void mySerialPort_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+        {
 
+
+            //SerialPort sp = (SerialPort)sender;
+            //string indata = sp.ReadExisting();
+            string indata = mySerialPort.ReadLine() ;
+            //string RegularExpressions = "^(([0-9]+\\.[0-9]*[1-9][0-9]*)|([0-9]*[1-9][0-9]*\\.[0-9]+)|([0-9]*[1-9][0-9]*))$";
+            //textBox1.Text = indata;
+            Invoke(new Action<string>(
+                    (s) =>
+                    {    //if (indata== RegularExpressions)
+                        // {
+                                serialPort_textBox.Text += s + " °C\r\n";
+
+                                serialPort_textBox.SelectionStart = serialPort_textBox.Text.Length;
+
+                                serialPort_textBox.ScrollToCaret();
+                       // }
+                    }
+                ), indata);
+            
+
+
+
+
+        }
+
+        private void serialPort_button_Click(object sender, EventArgs e)
+        {
+            if (!serialPort_is_open)
+            {
+                serialPort_is_open = true;
+                serialPort_button.Text = "Serial Close";
+                this.mySerialPort.Open();
+
+                temp_radioButton.Enabled = true;
+            }
+            else
+            {
+                serialPort_is_open = false;
+                serialPort_button.Text = "Serial Open";
+                this.mySerialPort.Close();
+                rb1.Checked = true;
+                temp_radioButton.Checked = false;
+                temp_radioButton.Enabled = false;
+            }
+                
+        }
     }
 
 
