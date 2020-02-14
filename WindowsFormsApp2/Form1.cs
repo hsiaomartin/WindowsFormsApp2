@@ -48,7 +48,7 @@ namespace WindowsFormsApp2
             this.chart1.Titles.Add("S01");
             this.chart1.Titles[0].Text = "XXX顯示";
             this.chart1.Titles[0].ForeColor = Color.RoyalBlue;
-            this.chart1.Titles[0].Font = new System.Drawing.Font("Microsoft Sans Serifzzzzzz", 12F);
+            this.chart1.Titles[0].Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
             //設定圖表顯示樣式
             this.chart1.Series[0].Color = Color.Red;
 
