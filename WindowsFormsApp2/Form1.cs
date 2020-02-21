@@ -16,7 +16,7 @@ namespace WindowsFormsApp2
 {
     public partial class Form1 : Form
     {
-        private Queue<double> dataQueue = new Queue<double>(10);
+        private Queue<double> dataQueue = new Queue<double>(20);
         private bool serialPort_is_open = false;
         private bool time_tick_is_open = false;
         private int curValue = 0;
@@ -28,6 +28,7 @@ namespace WindowsFormsApp2
         public Form1()
         {
             InitializeComponent();
+            this.timer2.Start();
             InitChart();
             CustomizedLineSeries_Load();
         }
@@ -37,43 +38,39 @@ namespace WindowsFormsApp2
             {
                 this.timer1.Start();
                 myBtn.Text = "Time Stop";
-                
+                serialPort_textBox.Text += "Time Start！\r\n";
             }
             else
             {
                 this.timer1.Stop();
                 myBtn.Text = "Time Start";
-                
-                
+                serialPort_textBox.Text += "Time Stop！\r\n";
             }
-
-            time_tick_is_open= !time_tick_is_open;
+            serialPort_textBox.SelectionStart = serialPort_textBox.Text.Length;
+            serialPort_textBox.ScrollToCaret();
+            time_tick_is_open = !time_tick_is_open;
 
         }
         private void labelChange(object sender, EventArgs e) {   //label click event
-            label_counter += 1;
+           // label_counter += 1;
          //  label1. Text = label_counter.ToString();
           //  label1.Text = this.timer1.Interval.ToString();
         }
         private void timer1_Tick(object sender, EventArgs e)
         {
             this.timer1.Stop();
-            
-            UpdateQueueValue();
-            this.chart1.Series[0].Points.Clear();
-            Values.Clear();
-            
-            for (int i = 0; i < dataQueue.Count; i++)
-            {
-                this.chart1.Series[0].Points.AddXY((i + 1), dataQueue.ElementAt(i));
-                Values.Add(dataQueue.ElementAt(i));
-                
-                
-            }
-                myLineSeries.Values = Values;
-                label_counter += this.timer1.Interval;
-                label1.Text = label_counter.ToString() + "ms";
+
+
+            UpdateChart();
+
             this.timer1.Start();
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+
+            label_counter += this.timer1.Interval/100;
+            label1.Text = label_counter.ToString() + " s";
         }
 
         private void InitChart()
@@ -87,7 +84,7 @@ namespace WindowsFormsApp2
             System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series("Series 1");
             series1.ChartArea = "ChartArea 1";
             series1.ChartType = SeriesChartType.Line;
-            series1.IsValueShownAsLabel = true;
+            series1.IsValueShownAsLabel = false;
             this.chart1.Series.Add(series1);
             //設定圖表顯示樣式
             this.chart1.ChartAreas[0].AxisY.Minimum = 17;
@@ -132,6 +129,7 @@ namespace WindowsFormsApp2
             if (rb1.Checked)
             {
                 this.chart1.Titles[0].Text = string.Format(" {0} 顯示", rb1.Text);
+                
                 Random r = new Random();
                 for (int i = 0; i < num; i++)
                 {
@@ -142,12 +140,13 @@ namespace WindowsFormsApp2
             if (rb2.Checked)
             {
                 this.chart1.Titles[0].Text = string.Format(" {0} 顯示", rb2.Text);
+                
                 for (int i = 0; i < num; i++)
                 {
                     //對curValue只取[0,360]之間的值
                     curValue = curValue % 360;
-                    //對得到的正弦值，放大50倍，並上移50
-                    dataQueue.Enqueue((10 * Math.Sin(curValue * Math.PI / 180)) + 10);
+                    //對得到的正弦值，放大20倍，並上移20
+                    dataQueue.Enqueue((5 * Math.Sin(curValue * Math.PI / 180)) + 23);
                     curValue = curValue + 10;
                 }
             }
@@ -157,6 +156,7 @@ namespace WindowsFormsApp2
 
             if (temp_radioButton.Checked) {
                 this.chart1.Titles[0].Text = string.Format("{0}顯示","溫度");
+               
                 string indata = mySerialPort.ReadLine();
                 double indata_r=0;
                // backgroundWorker1.RunWorkerAsync(indata);
@@ -180,6 +180,21 @@ namespace WindowsFormsApp2
                     }
                 }
             
+
+        }
+
+        private void UpdateChart() {
+
+            UpdateQueueValue();
+            this.chart1.Series[0].Points.Clear();
+            Values.Clear();
+            for (int i = 0; i < dataQueue.Count; i++)
+            {
+                this.chart1.Series[0].Points.AddXY((i + 1), dataQueue.ElementAt(i));
+                Values.Add(dataQueue.ElementAt(i));
+            }
+            myLineSeries.Values = Values;
+
 
         }
 
@@ -218,7 +233,9 @@ namespace WindowsFormsApp2
                 serialPort_is_open = true;
                 serialPort_button.Text = "Serial Close";
                 this.mySerialPort.Open();
-
+                serialPort_textBox.Text += "Serial connected！\r\n";
+                serialPort_textBox.SelectionStart = serialPort_textBox.Text.Length;
+                serialPort_textBox.ScrollToCaret();
                 temp_radioButton.Enabled = true;
             }
             else
@@ -226,6 +243,9 @@ namespace WindowsFormsApp2
                 serialPort_is_open = false;
                 serialPort_button.Text = "Serial Open";
                 this.mySerialPort.Close();
+                serialPort_textBox.Text += "Serial disconnected！\r\n";
+                serialPort_textBox.SelectionStart = serialPort_textBox.Text.Length;
+                serialPort_textBox.ScrollToCaret();
                 rb1.Checked = true;
                 temp_radioButton.Checked = false;
                 temp_radioButton.Enabled = false;
@@ -236,10 +256,7 @@ namespace WindowsFormsApp2
 
 
 
-        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
-        {
 
-        }
 
 
         private void CustomizedLineSeries_Load()
@@ -250,15 +267,28 @@ namespace WindowsFormsApp2
                 Stroke = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 142, 196)),
                 Fill = System.Windows.Media.Brushes.Transparent,
                 LineSmoothness = 1,
-                PointGeometrySize = 15,
+                PointGeometrySize = 8,
                 PointForeground =
                     new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(34, 46, 49))
+                
             };
             
             cartesianChart1.Series.Add(myLineSeries);
 
-            cartesianChart1.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(34, 46, 49));          
+            cartesianChart1.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(34, 46, 49));
+
+            cartesianChart1.AxisX.Add(new LiveCharts.Wpf.Axis
+            {
+                IsMerged = true,
+                Separator = new Separator
+                {
+                    StrokeThickness = 1,
+                    StrokeDashArray = new System.Windows.Media.DoubleCollection(2),
+                    Stroke = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(64, 79, 86))
+                }
+            });
         }
+
 
     }
 
